@@ -1,0 +1,15 @@
+pandas
+scikit-learn
+tqdm
+opencv-python
+pydicom
+dicomsdl
+joblib
+torch
+torchvision
+matplotlib
+albumentations --no-binary qudida,albumentations
+openmim
+mmpretrain
+mmcv
+mmdet
