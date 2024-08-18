@@ -76,7 +76,7 @@ class SoftmaxEQLLoss(_Loss):
 
 
 @MODELS.register_module(force=True)
-class RSNAAuxCls(ImageClassifier):
+class BreastCancerAuxCls(ImageClassifier):
     def __init__(
         self,
         backbone: dict,
