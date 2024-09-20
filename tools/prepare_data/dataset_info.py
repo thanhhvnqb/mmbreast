@@ -36,10 +36,10 @@ if __name__ == "__main__":
     for dataset in datasets:
         d_info = {}
 
-        DATASET_DIR = os.path.join(PROCESSED_DATA_DIR, "classification", dataset)
+        DATASET_DIR = os.path.join(PROCESSED_DATA_DIR, "mmbreast", dataset)
         CSV_LABEL_PATH = os.path.join(
             PROCESSED_DATA_DIR,
-            "classification",
+            "mmbreast",
             dataset,
             "cleaned_label.csv",
         )

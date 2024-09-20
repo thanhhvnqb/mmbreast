@@ -29,7 +29,7 @@ PROCESSED_DATA_DIR = "./datasets/"
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("Prepair classification dataset.")
+    parser = argparse.ArgumentParser("Prepair mmbreast dataset.")
     parser.add_argument(
         "--dataset",
         type=str,
@@ -65,7 +65,7 @@ def main(args):
 
     print("Processing", dataset)
     raw_root_dir = args.root_dir
-    cleaned_root_dir = os.path.join(PROCESSED_DATA_DIR, "classification", dataset)
+    cleaned_root_dir = os.path.join(PROCESSED_DATA_DIR, "mmbreast", dataset)
     stage1_images_dir = os.path.join(cleaned_root_dir, "stage1_images")
     cleaned_label_path = os.path.join(cleaned_root_dir, "cleaned_label.csv")
     cleaned_images_dir = os.path.join(cleaned_root_dir, "cleaned_images")

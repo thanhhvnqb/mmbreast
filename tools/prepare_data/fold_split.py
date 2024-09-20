@@ -122,7 +122,7 @@ def fold_check_rsna(train_df, val_df):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("Prepair classification dataset.")
+    parser = argparse.ArgumentParser("Prepair mmbreast dataset.")
     parser.add_argument(
         "--dataset",
         type=str,
@@ -149,20 +149,20 @@ if __name__ == "__main__":
 
     CSV_LABEL_PATH = os.path.join(
         PROCESSED_DATA_DIR,
-        "classification",
+        "mmbreast",
         dataset,
         "cleaned_label.csv",
     )
     SPLIT_LABEL_PATH = os.path.join(
         PROCESSED_DATA_DIR,
-        "classification",
+        "mmbreast",
         dataset,
         "cleaned_label_split.csv",
     )
     df = pd.read_csv(CSV_LABEL_PATH)
     SAVE_DIR = os.path.join(
         PROCESSED_DATA_DIR,
-        "classification",
+        "mmbreast",
         dataset,
         "fold",
     )

@@ -37,7 +37,7 @@ bgr_std = [51.8555656, 51.8555656, 51.8555656]
 train_pipeline = [
     dict(
         type="LoadImageRSNABreastAux",
-        img_prefix=f"datasets/classification/{dataset}/cleaned_images",
+        img_prefix=f"datasets/mmbreast/{dataset}/cleaned_images",
     ),
     dict(
         type="Resize",
@@ -75,7 +75,7 @@ train_pipeline = [
 test_pipeline = [
     dict(
         type="LoadImageRSNABreastAux",
-        img_prefix=f"datasets/classification/{dataset}/cleaned_images",
+        img_prefix=f"datasets/mmbreast/{dataset}/cleaned_images",
     ),
     dict(type="ValTransform", size=(size[0], size[1])),
     dict(type="PackInputs"),
@@ -88,7 +88,7 @@ train_dataloader = dict(
     num_workers=16,
     dataset=dict(
         type="CsvGeneralDataset",
-        ann_file=f"datasets/classification/{dataset}/cleaned_label_split.csv",
+        ann_file=f"datasets/mmbreast/{dataset}/cleaned_label_split.csv",
         metainfo=dict(
             classes=(0, 1),
         ),
@@ -115,7 +115,7 @@ val_dataloader = dict(
     num_workers=16,
     dataset=dict(
         type="CsvGeneralDataset",
-        ann_file=f"datasets/classification/{dataset}/cleaned_label_split.csv",
+        ann_file=f"datasets/mmbreast/{dataset}/cleaned_label_split.csv",
         metainfo=dict(
             classes=(0, 1),
         ),
@@ -135,7 +135,7 @@ test_dataloader = dict(
     num_workers=16,
     dataset=dict(
         type="CsvGeneralDataset",
-        ann_file=f"datasets/classification/{dataset}/cleaned_label_split.csv",
+        ann_file=f"datasets/mmbreast/{dataset}/cleaned_label_split.csv",
         metainfo=dict(
             classes=(0, 1),
         ),
