@@ -25,7 +25,7 @@ STAGE2_PROCESS_FUNCS = {
     "bmcd": stage2_process_bmcd,
 }
 
-PROCESSED_DATA_DIR = "./datasets/"
+PROCESSED_DATA_DIR = "./datasets/mmbreast/"
 
 
 def parse_args():
@@ -65,7 +65,7 @@ def main(args):
 
     print("Processing", dataset)
     raw_root_dir = args.root_dir
-    cleaned_root_dir = os.path.join(PROCESSED_DATA_DIR, "mmbreast", dataset)
+    cleaned_root_dir = os.path.join(PROCESSED_DATA_DIR, dataset)
     stage1_images_dir = os.path.join(cleaned_root_dir, "stage1_images")
     cleaned_label_path = os.path.join(cleaned_root_dir, "cleaned_label.csv")
     cleaned_images_dir = os.path.join(cleaned_root_dir, "cleaned_images")

@@ -1,4 +1,5 @@
 from typing import Sequence, Union, Optional
+import os
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,8 @@ from mmengine.registry import DATASETS
 class CsvGeneralDataset(CustomDataset):
     def __init__(
         self,
-        ann_file,
+        dataset,
+        ann_path: str,
         metainfo: Optional[dict] = None,
         data_root: str = "",
         data_prefix: Union[str, dict] = "",
@@ -35,10 +37,14 @@ class CsvGeneralDataset(CustomDataset):
         self.train_fold = train
         assert label_key
         self.label_key = label_key
+        if not isinstance(dataset, list):
+            dataset = [dataset]
+        self.ann_path = ann_path
+        self.datasets = dataset
         super().__init__(
             data_root,
             data_prefix,
-            ann_file,
+            os.path.join(ann_path, dataset[0], "cleaned_label_split.csv"),
             True,
             extensions,
             metainfo,
@@ -47,14 +53,17 @@ class CsvGeneralDataset(CustomDataset):
         )
 
     def load_data_list(self):
+        for dataset in self.datasets:
+            ann_file = os.path.join(self.ann_path, dataset, "cleaned_label_split.csv")
+            df1 = pd.read_csv(ann_file)
+            if self.split >= 0:
+                if self.train_fold:
+                    df1 = df1[df1["split"] != self.split]
+                else:
+                    df1 = df1[df1["split"] == self.split]
+            df1["dataset"] = dataset
+            data_list = df1.to_dict("records")
 
-        df1 = pd.read_csv(self.ann_file)
-        if self.split >= 0:
-            if self.train_fold:
-                df1 = df1[df1["split"] != self.split]
-            else:
-                df1 = df1[df1["split"] == self.split]
-        data_list = df1.to_dict("records")
         return data_list
 
     def get_gt_labels(self):

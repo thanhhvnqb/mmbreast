@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import numpy as np
 
-PROCESSED_DATA_DIR = "./datasets/"
+PROCESSED_DATA_DIR = "./datasets/mmbreast/"
 
 
 class NpEncoder(json.JSONEncoder):
@@ -36,13 +36,8 @@ if __name__ == "__main__":
     for dataset in datasets:
         d_info = {}
 
-        DATASET_DIR = os.path.join(PROCESSED_DATA_DIR, "mmbreast", dataset)
-        CSV_LABEL_PATH = os.path.join(
-            PROCESSED_DATA_DIR,
-            "mmbreast",
-            dataset,
-            "cleaned_label.csv",
-        )
+        DATASET_DIR = os.path.join(PROCESSED_DATA_DIR, dataset)
+        CSV_LABEL_PATH = os.path.join(DATASET_DIR, "cleaned_label.csv")
         df = pd.read_csv(CSV_LABEL_PATH)
         d_info["full"] = get_df_info(df)
         for i in range(4):

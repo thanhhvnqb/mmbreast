@@ -5,6 +5,8 @@ from mmengine.analysis import get_model_complexity_info
 
 from mmpretrain import get_model
 
+from mmbreast import *
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Get model flops and params')
@@ -25,6 +27,8 @@ def main():
         input_shape = (3, args.shape[0], args.shape[0])
     elif len(args.shape) == 2:
         input_shape = (3, ) + tuple(args.shape)
+    elif len(args.shape) == 3:
+        input_shape = tuple(args.shape)
     else:
         raise ValueError('invalid input shape')
 

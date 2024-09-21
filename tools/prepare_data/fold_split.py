@@ -38,7 +38,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 # - Mean age of patients is between 56-61 (58.6 for train set), and patients in site 1 are younger than those in site 2
 # - 1-2% of patients use implants (1.4% for train set)
 
-PROCESSED_DATA_DIR = "./datasets/"
+PROCESSED_DATA_DIR = "./datasets/mmbreast/"
 
 
 # For BMCD/CMMD/CDD-CESM/MiniDDSM dataset
@@ -147,25 +147,12 @@ if __name__ == "__main__":
     dataset = args.dataset
     fold_check = fold_check_func[dataset]
 
-    CSV_LABEL_PATH = os.path.join(
-        PROCESSED_DATA_DIR,
-        "mmbreast",
-        dataset,
-        "cleaned_label.csv",
-    )
+    CSV_LABEL_PATH = os.path.join(PROCESSED_DATA_DIR, dataset, "cleaned_label.csv")
     SPLIT_LABEL_PATH = os.path.join(
-        PROCESSED_DATA_DIR,
-        "mmbreast",
-        dataset,
-        "cleaned_label_split.csv",
+        PROCESSED_DATA_DIR, dataset, "cleaned_label_split.csv"
     )
     df = pd.read_csv(CSV_LABEL_PATH)
-    SAVE_DIR = os.path.join(
-        PROCESSED_DATA_DIR,
-        "mmbreast",
-        dataset,
-        "fold",
-    )
+    SAVE_DIR = os.path.join(PROCESSED_DATA_DIR, dataset, "fold")
     os.makedirs(SAVE_DIR, exist_ok=True)
     ret = []
     if dataset == "vindr":

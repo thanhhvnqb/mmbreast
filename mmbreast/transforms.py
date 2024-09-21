@@ -242,7 +242,9 @@ class LoadImageRSNABreastAux(LoadImageFromFile):
             dict: The dict contains loaded image and meta information.
         """
         filename = f"{results['patient_id']}@{results['image_id']}.png"
-        filename = os.path.join(self.img_prefix, filename)
+        filename = os.path.join(
+            self.img_prefix, f"{results['dataset']}/cleaned_images/", filename
+        )
         img = cv2.imread(filename)
         assert img is not None
 

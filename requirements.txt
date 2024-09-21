@@ -1,3 +1,4 @@
+numpy==1.26.4
 pandas
 scikit-learn
 tqdm
@@ -8,8 +9,10 @@ joblib
 torch
 torchvision
 matplotlib
-albumentations --no-binary qudida,albumentations
+# albumentations --no-binary qudida,albumentations
+albumentations<=1.4.14
 openmim
 mmpretrain
-mmcv
+mmcv<2.2.0
 mmdet
+setuptools>=75.1.0

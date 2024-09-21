@@ -1,17 +1,16 @@
 default_scope = "mmpretrain"
-custom_imports = dict(imports=["mmdet.models"], allow_failed_imports=False)
+# custom_imports = dict(imports=["mmdet.models"], allow_failed_imports=False)
 num_classes = 2
-dataset = "cmmd"
+dataset = ["bmcd", "cddcesm", "cmmd", "miniddsm"]
 fold = 0
-size = (512, 256)  # h, w
-epochs = 100
+size = (1024, 512)  # h, w
+epochs = 35
 batch_size = 16
 model = dict(
     type="BreastCancerAuxCls",
     backbone=dict(
         type="ConvNeXt",
-        arch="pico",
-        in_channels=3,
+        arch="atto",
         drop_path_rate=0.1,
         layer_scale_init_value=0.0,
         use_grn=True,
@@ -19,7 +18,7 @@ model = dict(
     head=dict(
         type="LinearClsHead",
         num_classes=num_classes,
-        in_channels=512,
+        in_channels=320,
         loss=dict(type="SoftmaxEQLLoss", num_classes=num_classes),
         init_cfg=None,
     ),
@@ -37,7 +36,7 @@ bgr_std = [51.8555656, 51.8555656, 51.8555656]
 train_pipeline = [
     dict(
         type="LoadImageRSNABreastAux",
-        img_prefix=f"datasets/mmbreastset",
+        img_prefix="datasets/mmbreast/",
     ),
     dict(
         type="Resize",
@@ -69,15 +68,15 @@ train_pipeline = [
         fill_color=[77.52425988, 77.52425988, 77.52425988],
         fill_std=[51.8555656, 51.8555656, 51.8555656],
     ),
-    dict(type="ValTransform", size=(size[0], size[1])),
+    dict(type="ValTransform", size=size),
     dict(type="PackMxInputs"),
 ]
 test_pipeline = [
     dict(
         type="LoadImageRSNABreastAux",
-        img_prefix=f"datasets/mmbreast/,
+        img_prefix="datasets/mmbreast/",
     ),
-    dict(type="ValTransform", size=(size[0], size[1])),
+    dict(type="ValTransform", size=size),
     dict(type="PackInputs"),
 ]
 train_dataloader = dict(
@@ -88,7 +87,8 @@ train_dataloader = dict(
     num_workers=16,
     dataset=dict(
         type="CsvGeneralDataset",
-        ann_file=f"datasets/mmbreast/{dataset}/cleaned_label_split.csv",
+        ann_path="datasets/mmbreast/",
+        dataset=dataset,
         metainfo=dict(
             classes=(0, 1),
         ),
@@ -115,7 +115,8 @@ val_dataloader = dict(
     num_workers=16,
     dataset=dict(
         type="CsvGeneralDataset",
-        ann_file=f"datasets/mmbreast/{dataset}/cleaned_label_split.csv",
+        ann_path="datasets/mmbreast/",
+        dataset=dataset,
         metainfo=dict(
             classes=(0, 1),
         ),
@@ -135,7 +136,8 @@ test_dataloader = dict(
     num_workers=16,
     dataset=dict(
         type="CsvGeneralDataset",
-        ann_file=f"datasets/mmbreast/{dataset}/cleaned_label_split.csv",
+        ann_path="datasets/mmbreast/",
+        dataset=dataset,
         metainfo=dict(
             classes=(0, 1),
         ),
@@ -173,14 +175,14 @@ param_scheduler = [
         type="LinearLR",
         start_factor=0.001,
         by_epoch=True,
-        end=5,
+        end=1,
         convert_to_iter_based=True,
     ),
     dict(
         type="CosineAnnealingLR",
         eta_min=1e-05,
         by_epoch=True,
-        begin=5,
+        begin=1,
         T_max=epochs,
         convert_to_iter_based=True,
     ),
@@ -196,12 +198,13 @@ default_hooks = dict(
     param_scheduler=dict(type="ParamSchedulerHook"),
     checkpoint=dict(
         type="CheckpointHook",
-        interval=1,
+        interval=4,
         save_best="pfbeta",
         max_keep_ckpts=3,
         rule="greater",
     ),
     sampler_seed=dict(type="DistSamplerSeedHook"),
+    visualization=dict(type="VisualizationHook", enable=False),
 )
 custom_hooks = [
     dict(
@@ -220,8 +223,8 @@ env_cfg = dict(
 vis_backends = [dict(type="LocalVisBackend")]
 visualizer = dict(type="Visualizer", vis_backends=[dict(type="LocalVisBackend")])
 log_level = "INFO"
-load_from = "pretrained/convnext-v2-pico_clean-3365658b.pth"
+load_from = "https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-atto_fcmae-pre_3rdparty_in1k_20230104-23765f83.pth"
 resume = False
-work_dir = f"./work_folder/{dataset}/convnext-v2-pico-512x256/fold_{fold}"
+work_dir = f"./work_folder/from_imagenet/convnextv2-atto/"
 fp16 = dict(loss_scale=256.0, velocity_accum_type="half", accum_type="half")
 launcher = "none"
