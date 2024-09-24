@@ -1,0 +1,6 @@
+datasets
+work_folder
+**/*.pyc
+wandb
+.*
+pretrained
