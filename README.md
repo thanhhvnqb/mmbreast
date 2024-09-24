@@ -42,7 +42,7 @@ To prepare the breast cancer datasets, follow these steps:
 1. For `CMMD` and `BMCD`, copy the `<name_db>_raw_label.csv` file in the folder assets/cleaned_data, which we got from [\[1\]](https://github.com/dangnh0611/kaggle_rsna_breast_cancer) to the respective folder under the name `label.csv`.
 1. Run this command to convert dicom images and make `cleaned_label.csv`:
 ```bash
-python src/dataset/prepare_classification_dataset.py --dataset <name_dataset> --root-dir <path_to_downloaded_directory> --stage <stage>
+python src/dataset/prepare_mmbreast_dataset.py --dataset <name_dataset> --root-dir <path_to_downloaded_directory> --stage <stage>
 ```
 1. Run this command to split dataset to 4 folds:
 ```bash
@@ -58,7 +58,7 @@ The structure of folder datasets should be look like this:
 $ tree -L 3 datasets
 
 datasets
-└── classification
+└── mmbreast
     ├── bmcd
     │   ├── cleaned_images
     │   ├── cleaned_label.csv

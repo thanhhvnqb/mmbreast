@@ -10,7 +10,7 @@ model = dict(
     type="BreastCancerAuxCls",
     backbone=dict(
         type="ConvNeXt",
-        arch="atto",
+        arch="tiny",
         drop_path_rate=0.1,
         layer_scale_init_value=0.0,
         use_grn=True,
@@ -225,6 +225,6 @@ visualizer = dict(type="Visualizer", vis_backends=[dict(type="LocalVisBackend")]
 log_level = "INFO"
 load_from = "https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-atto_fcmae-pre_3rdparty_in1k_20230104-23765f83.pth"
 resume = False
-work_dir = f"./work_folder/from_imagenet/convnextv2-atto/"
+work_dir = "./work_folder/from_imagenet_4gencam/convnextv2-atto/"
 fp16 = dict(loss_scale=256.0, velocity_accum_type="half", accum_type="half")
 launcher = "none"
