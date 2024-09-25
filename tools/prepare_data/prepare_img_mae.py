@@ -13,7 +13,7 @@ sys.path.append(os.getcwd())
 from mmbreast import *
 from mmpretrain.registry import TRANSFORMS
 
-PROCESSED_DATA_DIR = "../../datasets/mmbreast"
+PROCESSED_DATA_DIR = "../datasets/mmbreast"
 
 
 class Inferencer(ImageClassificationInferencer):
@@ -92,11 +92,11 @@ if __name__ == "__main__":
         total_images_all += len(df)
         df["dataset"] = dataset
         df_lst = [row for _, row in df.iterrows()]
-        results = inferencer(df_lst, batch_size=32)
+        results = inferencer(df_lst, batch_size=2)
         num_saved_images_0 = 0
         num_saved_images_1 = 0
         for (index, row), result in tqdm(zip(df.iterrows(), results)):
-            if result["pred_score"] > 0.8 and result["pred_label"] == row["cancer"]:
+            if result["pred_score"] > 0.5 and result["pred_label"] == row["cancer"]:
                 filename = f"{row['patient_id']}@{row['image_id']}.png"
                 full_filename = os.path.join(
                     args.data_path, f"{dataset}/cleaned_images/", filename
@@ -109,9 +109,9 @@ if __name__ == "__main__":
                         SAVE_DIR, str(result["pred_label"]), f"{dataset}_{filename}"
                     ),
                 )
-            else:
-                print(
-                    f"Skip {row['patient_id']}@{row['image_id']} with score {result['pred_score']} and label {result['pred_label']} in comparing to groundtruth: {row["cancer"]}.")
+            # else:
+            #     print(
+            #         f"Skip {row['patient_id']}@{row['image_id']} with score {result['pred_score']} and label {result['pred_label']} in comparing to groundtruth: {row['cancer']}.")
         num_saved_images = num_saved_images_0 + num_saved_images_1
         print(f"Dataset: {dataset} | len = {len(df)} | Saved {num_saved_images}.")
         print("Saved 0: ", num_saved_images_0, " | Saved 1: ", num_saved_images_1)

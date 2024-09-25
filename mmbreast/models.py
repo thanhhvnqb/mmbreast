@@ -119,8 +119,8 @@ class BreastCancerAuxCls(ImageClassifier):
     def loss(self, inputs: torch.Tensor, data_samples: List[MxDataSample]) -> dict:
         feats = self.extract_feat(inputs)
         loss_cancer = self.head.loss(feats, data_samples)
-        cancer_target = torch.stack([i.gt_label for i in data_samples]).to("cuda:0")
-        aux_target = torch.stack([i.aux_label.label for i in data_samples]).to("cuda:0")
+        cancer_target = torch.stack([i.gt_label for i in data_samples]).to(inputs.get_device())
+        aux_target = torch.stack([i.aux_label.label for i in data_samples]).to(inputs.get_device())
         feats = feats[-1]
         aux_weight = 0.1
 

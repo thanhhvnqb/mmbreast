@@ -9,16 +9,14 @@ batch_size = 2
 model = dict(
     type="BreastCancerAuxCls",
     backbone=dict(
-        type="ConvNeXt",
-        arch="tiny",
-        drop_path_rate=0.1,
-        layer_scale_init_value=0.0,
-        use_grn=True,
+        type="EfficientNetV2",
+        arch="b3",
     ),
+    neck=dict(type='GlobalAveragePooling'),
     head=dict(
         type="LinearClsHead",
         num_classes=num_classes,
-        in_channels=768,
+        in_channels=1536,
         loss=dict(type="SoftmaxEQLLoss", num_classes=num_classes),
         init_cfg=None,
     ),
@@ -223,8 +221,8 @@ env_cfg = dict(
 vis_backends = [dict(type="LocalVisBackend")]
 visualizer = dict(type="Visualizer", vis_backends=[dict(type="LocalVisBackend")])
 log_level = "INFO"
-load_from = "https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-tiny_3rdparty-fcmae_in1k_20230104-80513adc.pth"
+load_from = "https://download.openmmlab.com/mmclassification/v0/efficientnetv2/efficientnetv2-b3_3rdparty_in1k_20221221-b6f07a36.pth"
 resume = False
-work_dir = "./work_folder/from_imagenet_4gencam/convnextv2-tiny/"
+work_dir = "./work_folder/from_imagenet_4gencam/efficientv2-b3/"
 fp16 = dict(loss_scale=256.0, velocity_accum_type="half", accum_type="half")
 launcher = "none"
