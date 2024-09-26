@@ -262,25 +262,41 @@ class LoadImageRSNABreastAux(LoadImageFromFile):
         try:
             BIRADS = results["BIRADS"]
             if isinstance(BIRADS, str):
-                BIRADS = float(BIRADS[0])
+                BIRADS = float(BIRADS[0]) - 1
             elif math.isnan(BIRADS):
                 BIRADS = -1
         except Exception:
             BIRADS = -1
         try:
             invasive = results["invasive"]
+            if isinstance(invasive, str):
+                invasive = float(invasive)
+            elif math.isnan(invasive):
+                invasive = -1
         except Exception:
             invasive = -1
         try:
             difficulty = results["difficult_negative_case"]
+            if isinstance(difficulty, str):
+                difficulty = float(difficulty)
+            elif math.isnan(difficulty):
+                difficulty = -1
         except Exception:
             difficulty = -1
         try:
             implant = results["implant"]
+            if isinstance(implant, str):
+                implant = float(implant)
+            elif math.isnan(implant):
+                implant = -1
         except Exception:
             implant = -1
         try:
             age = results["age"]
+            if isinstance(age, str):
+                age = float(age)
+            elif math.isnan(age):
+                age = -1
         except Exception:
             age = -1
         try:

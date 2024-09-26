@@ -97,7 +97,7 @@ class BreastCancerAuxCls(ImageClassifier):
             self.nn_view = nn.Linear(in_channels, 6)
         else:
             self.nn_view = None
-        self.nn_BIRADS = nn.Linear(in_channels, 3)
+        self.nn_BIRADS = nn.Linear(in_channels, 5)
         if model_config in ["rsna"]:
             self.nn_difficulty = nn.Linear(in_channels, 2)
         else:
@@ -112,7 +112,7 @@ class BreastCancerAuxCls(ImageClassifier):
         self.ce_loss = torch.nn.CrossEntropyLoss(label_smoothing=0.01)
         self.sigmoid_loss = torch.nn.BCEWithLogitsLoss()
 
-        self.BIRADS_lossfn = SoftmaxEQLLoss(num_classes=3)
+        self.BIRADS_lossfn = SoftmaxEQLLoss(num_classes=5)
         self.diff_lossfn = SoftmaxEQLLoss(num_classes=2)
         self.density_lossfn = SoftmaxEQLLoss(num_classes=4)
 

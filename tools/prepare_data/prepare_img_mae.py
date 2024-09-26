@@ -63,24 +63,28 @@ def parse_args():
 if __name__ == "__main__":
     datasets = [
         "bmcd",
-        "cmmd",
-        "cddcesm",
-        "miniddsm",
+        # "cmmd",
+        # "cddcesm",
+        # "miniddsm",
         # "rsna",
         # "vindr",
     ]  # "bmcd", "cmmd", "cddcesm", "miniddsm", "rsna", "vindr"
     args = parse_args()
     inferencer = Inferencer(args.config, args.checkpoint, device="cuda:0")
-    SAVE_DIR = os.path.join(args.data_path, "mae")
-    if os.path.isdir(SAVE_DIR):
-        print(f"Directory {SAVE_DIR} exists, removing it.")
-        shutil.rmtree(SAVE_DIR)
-    os.makedirs(SAVE_DIR, exist_ok=True)
-    for label in [0, 1]:
-        os.makedirs(os.path.join(SAVE_DIR, str(label)), exist_ok=True)
-    num_saved_images_all = 0
+    total_saved_images_all = 0
+    total_saved_images_0 = 0
+    total_saved_images_1 = 0
     total_images_all = 0
+    total_images_0 = 0
+    total_images_1 = 0
     for dataset in datasets:
+        SAVE_DIR = os.path.join(args.data_path, "mae", dataset)
+        if os.path.isdir(SAVE_DIR):
+            print(f"Directory {SAVE_DIR} exists, removing it.")
+            shutil.rmtree(SAVE_DIR)
+        os.makedirs(SAVE_DIR, exist_ok=True)
+        for label in [0, 1]:
+            os.makedirs(os.path.join(SAVE_DIR, str(label)), exist_ok=True)
         print("Processing dataset: ", dataset)
         ann_file = os.path.join(args.data_path, dataset, "cleaned_label_split.csv")
         df = pd.read_csv(ann_file)
@@ -89,13 +93,16 @@ if __name__ == "__main__":
         else:
             df = df[df["split"] != args.fold]
         print("Total images: ", len(df))
-        total_images_all += len(df)
         df["dataset"] = dataset
         df_lst = [row for _, row in df.iterrows()]
         results = inferencer(df_lst, batch_size=2)
         num_saved_images_0 = 0
         num_saved_images_1 = 0
-        for (index, row), result in tqdm(zip(df.iterrows(), results)):
+        num_images_0 = 0
+        num_images_1 = 0
+        for (index, row), result in zip(df.iterrows(), results):
+            num_images_0 += 1 if row["cancer"] == 0 else 0
+            num_images_1 += 1 if row["cancer"] == 1 else 0
             if result["pred_score"] > 0.5 and result["pred_label"] == row["cancer"]:
                 filename = f"{row['patient_id']}@{row['image_id']}.png"
                 full_filename = os.path.join(
@@ -113,9 +120,15 @@ if __name__ == "__main__":
             #     print(
             #         f"Skip {row['patient_id']}@{row['image_id']} with score {result['pred_score']} and label {result['pred_label']} in comparing to groundtruth: {row['cancer']}.")
         num_saved_images = num_saved_images_0 + num_saved_images_1
-        print(f"Dataset: {dataset} | len = {len(df)} | Saved {num_saved_images}.")
-        print("Saved 0: ", num_saved_images_0, " | Saved 1: ", num_saved_images_1)
-        num_saved_images_all += num_saved_images
+        print(f"Dataset: {dataset} | len = {len(df)} | 0: {num_images_0} | 1: {num_images_1}.")
+        print(f"Saved {num_saved_images} | Saved 0: {num_saved_images_0} | Saved 1: {num_saved_images_1}")
+        total_saved_images_all += num_saved_images
+        total_saved_images_0 += num_saved_images_0
+        total_saved_images_1 += num_saved_images_1
+        total_images_0 += num_images_0
+        total_images_1 += num_images_1
+        total_images_all += len(df)
+    print(f"Total images: {total_images_all}. | 0: {total_images_0} | 1: {total_images_1}.")
     print(
-        f"Saved {num_saved_images_all} images for all datasets with total = {total_images_all}."
+        f"Saved {total_saved_images_all} | 0: {total_saved_images_0} | 1: {total_saved_images_1}."
     )
