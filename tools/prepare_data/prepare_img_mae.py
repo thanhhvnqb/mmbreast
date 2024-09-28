@@ -63,9 +63,9 @@ def parse_args():
 if __name__ == "__main__":
     datasets = [
         "bmcd",
-        # "cmmd",
-        # "cddcesm",
-        # "miniddsm",
+        "cmmd",
+        "cddcesm",
+        "miniddsm",
         # "rsna",
         # "vindr",
     ]  # "bmcd", "cmmd", "cddcesm", "miniddsm", "rsna", "vindr"
