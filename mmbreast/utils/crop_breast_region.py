@@ -54,7 +54,7 @@ def crop_breast_region(src_img, threshold=0.3):
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
     # Apply a binary threshold to create a binary image
-    _, binary_mask = cv2.threshold(blurred, 50, 255, cv2.THRESH_BINARY)
+    _, binary_mask = cv2.threshold(blurred, 10, 255, cv2.THRESH_BINARY)
     # Get the crop boundaries based on the binary mask
     top, bottom, left, right = find_breast_region_edges(binary_mask, threshold)
 
