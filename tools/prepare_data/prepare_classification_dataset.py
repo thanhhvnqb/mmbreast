@@ -25,7 +25,7 @@ STAGE2_PROCESS_FUNCS = {
     "bmcd": stage2_process_bmcd,
 }
 
-PROCESSED_DATA_DIR = "./datasets/mmbreast/"
+PROCESSED_DATA_DIR = "../datasets/mmbreast/"
 
 
 def parse_args():

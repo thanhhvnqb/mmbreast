@@ -16,6 +16,7 @@ from mmengine.utils import is_str
 
 from .augs import CustomRandomSizedCropNoResize
 from .utils.s2d2s import depth_to_space, space_to_depth
+from .utils.crop_breast_region import crop_breast_region
 
 aux_view = {
     "AT": 0,
@@ -50,6 +51,16 @@ class SpaceToDepth(BaseTransform):
 
     def transform(self, results: dict) -> Optional[dict]:
         results["inputs"] = space_to_depth(results["inputs"], self.scale)
+        return results
+
+
+@TRANSFORMS.register_module(force=True)
+class CropBreastRegion(BaseTransform):
+    def __init__(self, threshhold=0.1):
+        self.threshhold = threshhold
+
+    def transform(self, results: dict) -> Optional[dict]:
+        results["img"] = crop_breast_region(results["img"], self.threshhold)
         return results
 
 
@@ -358,7 +369,7 @@ def to_tensor(data):
         )
 
 
-@TRANSFORMS.register_module()
+@TRANSFORMS.register_module(force=True)
 class PackMxInputs(BaseTransform):
     """Pack the inputs data for the classification.
     **Required Keys:**

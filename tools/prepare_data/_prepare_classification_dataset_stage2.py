@@ -261,7 +261,7 @@ def stage2_process(
     )
     end = time.time()
     gc.collect()
-    print(f"Convert done in {end - start} sec")
+    print(f"Crop done in {end - start} sec")
 
 
 def stage2_process_rsna(*args, **kwargs):
