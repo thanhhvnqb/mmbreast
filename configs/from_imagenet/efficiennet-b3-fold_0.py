@@ -236,6 +236,6 @@ visualizer = dict(type="Visualizer", vis_backends=[dict(type="LocalVisBackend")]
 log_level = "INFO"
 load_from = "https://download.openmmlab.com/mmclassification/v0/efficientnet/efficientnet-b3_3rdparty-ra-noisystudent_in1k_20221103-a4ab5fd6.pth"
 resume = False
-work_dir = f"./work_folder/from_imagenet_4gencam/efficient-b3-{epochs}/"
+work_dir = f"./work_folder/from_imagenet/efficient-b3-{epochs}/"
 fp16 = dict(loss_scale=256.0, velocity_accum_type="half", accum_type="half")
 launcher = "none"
