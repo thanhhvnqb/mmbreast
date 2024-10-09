@@ -53,6 +53,7 @@ class CsvGeneralDataset(CustomDataset):
         )
 
     def load_data_list(self):
+        data_list = []
         for dataset in self.datasets:
             ann_file = os.path.join(self.ann_path, dataset, "cleaned_label_split.csv")
             df1 = pd.read_csv(ann_file)
@@ -62,8 +63,9 @@ class CsvGeneralDataset(CustomDataset):
                 else:
                     df1 = df1[df1["split"] == self.split]
             df1["dataset"] = dataset
-            data_list = df1.to_dict("records")
-
+            print("Loaded", len(df1), "images from", dataset)
+            data_list.extend(df1.to_dict("records"))
+        print("Total", len(data_list), "images")
         return data_list
 
     def get_gt_labels(self):
