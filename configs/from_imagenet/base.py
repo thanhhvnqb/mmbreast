@@ -1,18 +1,24 @@
 default_scope = "mmpretrain"
 # custom_imports = dict(imports=["mmdet.models"], allow_failed_imports=False)
 num_classes = 2
-dataset = ["bmcd", "cddcesm", "cmmd", "miniddsm"]
+dataset = [
+    "bmcd",
+    "cddcesm",
+    "cmmd",
+    "miniddsm",
+]  # "bmcd", "cddcesm", "cmmd", "miniddsm", "rsna", "vindr"
 fold = 0
 size = (2048, 1024)  # h, w
-epochs = 35
+epochs = 50
 batch_size = 2
+
 model = dict(
     type="BreastCancerAuxCls",
     backbone=dict(
-        type="EfficientNetV2",
+        type="EfficientNet",
         arch="b3",
     ),
-    neck=dict(type='GlobalAveragePooling'),
+    neck=dict(type="GlobalAveragePooling"),
     head=dict(
         type="LinearClsHead",
         num_classes=num_classes,
@@ -23,6 +29,7 @@ model = dict(
     init_cfg=dict(type="TruncNormal", layer=["Conv2d", "Linear"], std=0.02, bias=0.0),
     model_config=dataset,
 )
+
 data_preprocessor = dict(
     num_classes=num_classes,
     mean=[77.52425988, 77.52425988, 77.52425988],
@@ -35,6 +42,10 @@ train_pipeline = [
     dict(
         type="LoadImageRSNABreastAux",
         img_prefix="../datasets/mmbreast/",
+    ),
+    dict(
+        type="CropBreastRegion",
+        threshhold=0.1,
     ),
     dict(
         type="Resize",
@@ -74,8 +85,12 @@ test_pipeline = [
         type="LoadImageRSNABreastAux",
         img_prefix="../datasets/mmbreast/",
     ),
+    dict(
+        type="CropBreastRegion",
+        threshhold=0.1,
+    ),
     dict(type="ValTransform", size=size),
-    dict(type="PackInputs"),
+    dict(type="PackMxInputs"),
 ]
 train_dataloader = dict(
     pin_memory=False,
@@ -119,7 +134,7 @@ val_dataloader = dict(
             classes=(0, 1),
         ),
         split=fold,
-        train=True,
+        train=False,
         label_key="cancer",
         pipeline=test_pipeline,
     ),
@@ -140,7 +155,7 @@ test_dataloader = dict(
             classes=(0, 1),
         ),
         split=fold,
-        train=True,
+        train=False,
         label_key="cancer",
         pipeline=test_pipeline,
     ),
@@ -173,14 +188,14 @@ param_scheduler = [
         type="LinearLR",
         start_factor=0.001,
         by_epoch=True,
-        end=1,
+        end=5,
         convert_to_iter_based=True,
     ),
     dict(
         type="CosineAnnealingLR",
         eta_min=1e-05,
         by_epoch=True,
-        begin=1,
+        begin=5,
         T_max=epochs,
         convert_to_iter_based=True,
     ),
@@ -196,7 +211,7 @@ default_hooks = dict(
     param_scheduler=dict(type="ParamSchedulerHook"),
     checkpoint=dict(
         type="CheckpointHook",
-        interval=4,
+        interval=1,
         save_best="pfbeta",
         max_keep_ckpts=3,
         rule="greater",
@@ -221,8 +236,6 @@ env_cfg = dict(
 vis_backends = [dict(type="LocalVisBackend")]
 visualizer = dict(type="Visualizer", vis_backends=[dict(type="LocalVisBackend")])
 log_level = "INFO"
-load_from = "https://download.openmmlab.com/mmclassification/v0/efficientnetv2/efficientnetv2-b3_3rdparty_in1k_20221221-b6f07a36.pth"
 resume = False
-work_dir = "./work_folder/from_imagenet_4gencam/efficientv2-b3/"
 fp16 = dict(loss_scale=256.0, velocity_accum_type="half", accum_type="half")
 launcher = "none"

@@ -1,27 +1,24 @@
 default_scope = "mmpretrain"
 # custom_imports = dict(imports=["mmdet.models"], allow_failed_imports=False)
 num_classes = 2
-dataset = [
-    "bmcd",
-    "cddcesm",
-    "cmmd",
-    "miniddsm",
-]  # "bmcd", "cddcesm", "cmmd", "miniddsm", "rsna", "vindr"
+dataset = ["bmcd", "cddcesm", "cmmd", "miniddsm"]
 fold = 0
 size = (2048, 1024)  # h, w
-epochs = 100
-batch_size = 2
+epochs = 35
+batch_size = 16
 model = dict(
     type="BreastCancerAuxCls",
     backbone=dict(
-        type="EfficientNet",
-        arch="b3",
+        type="ConvNeXt",
+        arch="atto",
+        drop_path_rate=0.1,
+        layer_scale_init_value=0.0,
+        use_grn=True,
     ),
-    neck=dict(type="GlobalAveragePooling"),
     head=dict(
         type="LinearClsHead",
         num_classes=num_classes,
-        in_channels=1536,
+        in_channels=320,
         loss=dict(type="SoftmaxEQLLoss", num_classes=num_classes),
         init_cfg=None,
     ),
@@ -40,10 +37,6 @@ train_pipeline = [
     dict(
         type="LoadImageRSNABreastAux",
         img_prefix="../datasets/mmbreast/",
-    ),
-    dict(
-        type="CropBreastRegion",
-        threshhold=0.1,
     ),
     dict(
         type="Resize",
@@ -83,12 +76,8 @@ test_pipeline = [
         type="LoadImageRSNABreastAux",
         img_prefix="../datasets/mmbreast/",
     ),
-    dict(
-        type="CropBreastRegion",
-        threshhold=0.1,
-    ),
     dict(type="ValTransform", size=size),
-    dict(type="PackMxInputs"),
+    dict(type="PackInputs"),
 ]
 train_dataloader = dict(
     pin_memory=False,
@@ -186,14 +175,14 @@ param_scheduler = [
         type="LinearLR",
         start_factor=0.001,
         by_epoch=True,
-        end=int(epochs // 20),
+        end=1,
         convert_to_iter_based=True,
     ),
     dict(
         type="CosineAnnealingLR",
         eta_min=1e-05,
         by_epoch=True,
-        begin=int(epochs // 20),
+        begin=1,
         T_max=epochs,
         convert_to_iter_based=True,
     ),
@@ -234,8 +223,8 @@ env_cfg = dict(
 vis_backends = [dict(type="LocalVisBackend")]
 visualizer = dict(type="Visualizer", vis_backends=[dict(type="LocalVisBackend")])
 log_level = "INFO"
-load_from = "https://download.openmmlab.com/mmclassification/v0/efficientnet/efficientnet-b3_3rdparty-ra-noisystudent_in1k_20221103-a4ab5fd6.pth"
+load_from = "https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-atto_fcmae-pre_3rdparty_in1k_20230104-23765f83.pth"
 resume = False
-work_dir = f"./work_folder/from_imagenet_4gencam/efficient-b3-{epochs}/"
+work_dir = "./work_folder/gencam/convnextv2-atto/"
 fp16 = dict(loss_scale=256.0, velocity_accum_type="half", accum_type="half")
 launcher = "none"

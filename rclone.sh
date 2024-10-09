@@ -1,1 +1,1 @@
-rclone copy -v /home/islab/DATA/mmbreast gdrive:Working/mmbreast/ --drive-chunk-size=256M --transfers=40 --checkers=40 --tpslimit=9 --fast-list --max-backlog 200000
+rclone copy -v /home/islab/DATA/mmbreast/work_folder gdrive:Working/mmbreast/islab-pc/ --drive-chunk-size=256M --transfers=40 --checkers=40 --tpslimit=9 --fast-list --max-backlog 200000

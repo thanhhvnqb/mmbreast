@@ -1,18 +1,16 @@
 default_scope = "mmpretrain"
-custom_imports = dict(imports=["mmdet.models"], allow_failed_imports=False)
+# custom_imports = dict(imports=["mmdet.models"], allow_failed_imports=False)
 num_classes = 2
-dataset = "cmmd"
+dataset = ["bmcd", "cddcesm", "cmmd", "miniddsm"]
 fold = 0
-size = (1024, 512)  # h, w
-scale = 2
-epochs = 100
-batch_size = 16
+size = (2048, 1024)  # h, w
+epochs = 35
+batch_size = 2
 model = dict(
     type="BreastCancerAuxCls",
     backbone=dict(
         type="ConvNeXt",
-        arch="pico",
-        in_channels=3 * scale * scale,
+        arch="tiny",
         drop_path_rate=0.1,
         layer_scale_init_value=0.0,
         use_grn=True,
@@ -20,7 +18,7 @@ model = dict(
     head=dict(
         type="LinearClsHead",
         num_classes=num_classes,
-        in_channels=512,
+        in_channels=768,
         loss=dict(type="SoftmaxEQLLoss", num_classes=num_classes),
         init_cfg=None,
     ),
@@ -29,20 +27,20 @@ model = dict(
 )
 data_preprocessor = dict(
     num_classes=num_classes,
-    mean=[77.52425988, 77.52425988, 77.52425988] * scale * scale,
-    std=[51.8555656, 51.8555656, 51.8555656] * scale * scale,
+    mean=[77.52425988, 77.52425988, 77.52425988],
+    std=[51.8555656, 51.8555656, 51.8555656],
     to_rgb=True,
 )
-bgr_mean = [77.52425988, 77.52425988, 77.52425988] * scale * scale
-bgr_std = [51.8555656, 51.8555656, 51.8555656] * scale * scale
+bgr_mean = [77.52425988, 77.52425988, 77.52425988]
+bgr_std = [51.8555656, 51.8555656, 51.8555656]
 train_pipeline = [
     dict(
         type="LoadImageRSNABreastAux",
-        img_prefix=f"datasets/mmbreast/{dataset}/cleaned_images",
+        img_prefix="../datasets/mmbreast/",
     ),
     dict(
         type="Resize",
-        scale=(size[0] * scale * 1.2, size[1] * scale * 1.2),
+        scale=(size[0] * 1.2, size[1] * 1.2),
         keep_ratio=True,
         interpolation="bicubic",
     ),
@@ -70,18 +68,16 @@ train_pipeline = [
         fill_color=[77.52425988, 77.52425988, 77.52425988],
         fill_std=[51.8555656, 51.8555656, 51.8555656],
     ),
-    dict(type="ValTransform", size=(size[0] * scale, size[1] * scale)),
+    dict(type="ValTransform", size=size),
     dict(type="PackMxInputs"),
-    dict(type="SpaceToDepth", scale=scale),
 ]
 test_pipeline = [
     dict(
         type="LoadImageRSNABreastAux",
-        img_prefix=f"datasets/mmbreast/{dataset}/cleaned_images",
+        img_prefix="../datasets/mmbreast/",
     ),
-    dict(type="ValTransform", size=(size[0] * scale, size[1] * scale)),
+    dict(type="ValTransform", size=size),
     dict(type="PackInputs"),
-    dict(type="SpaceToDepth", scale=scale),
 ]
 train_dataloader = dict(
     pin_memory=False,
@@ -91,7 +87,8 @@ train_dataloader = dict(
     num_workers=16,
     dataset=dict(
         type="CsvGeneralDataset",
-        ann_file=f"datasets/mmbreast/{dataset}/cleaned_label_split.csv",
+        ann_path="../datasets/mmbreast/",
+        dataset=dataset,
         metainfo=dict(
             classes=(0, 1),
         ),
@@ -118,12 +115,13 @@ val_dataloader = dict(
     num_workers=16,
     dataset=dict(
         type="CsvGeneralDataset",
-        ann_file=f"datasets/mmbreast/{dataset}/cleaned_label_split.csv",
+        ann_path="../datasets/mmbreast/",
+        dataset=dataset,
         metainfo=dict(
             classes=(0, 1),
         ),
         split=fold,
-        train=False,
+        train=True,
         label_key="cancer",
         pipeline=test_pipeline,
     ),
@@ -138,12 +136,13 @@ test_dataloader = dict(
     num_workers=16,
     dataset=dict(
         type="CsvGeneralDataset",
-        ann_file=f"datasets/mmbreast/{dataset}/cleaned_label_split.csv",
+        ann_path="../datasets/mmbreast/",
+        dataset=dataset,
         metainfo=dict(
             classes=(0, 1),
         ),
         split=fold,
-        train=False,
+        train=True,
         label_key="cancer",
         pipeline=test_pipeline,
     ),
@@ -176,14 +175,14 @@ param_scheduler = [
         type="LinearLR",
         start_factor=0.001,
         by_epoch=True,
-        end=5,
+        end=1,
         convert_to_iter_based=True,
     ),
     dict(
         type="CosineAnnealingLR",
         eta_min=1e-05,
         by_epoch=True,
-        begin=5,
+        begin=1,
         T_max=epochs,
         convert_to_iter_based=True,
     ),
@@ -199,12 +198,13 @@ default_hooks = dict(
     param_scheduler=dict(type="ParamSchedulerHook"),
     checkpoint=dict(
         type="CheckpointHook",
-        interval=1,
+        interval=4,
         save_best="pfbeta",
         max_keep_ckpts=3,
         rule="greater",
     ),
     sampler_seed=dict(type="DistSamplerSeedHook"),
+    visualization=dict(type="VisualizationHook", enable=False),
 )
 custom_hooks = [
     dict(
@@ -223,9 +223,8 @@ env_cfg = dict(
 vis_backends = [dict(type="LocalVisBackend")]
 visualizer = dict(type="Visualizer", vis_backends=[dict(type="LocalVisBackend")])
 log_level = "INFO"
-load_from = "pretrained/convnext-v2-pico-inchans12_clean-0d8df2ce.pth"
-# load_from = "https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-pico_fcmae-pre_3rdparty_in1k_20230104-d20263ca.pth"
+load_from = "https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-tiny_3rdparty-fcmae_in1k_20230104-80513adc.pth"
 resume = False
-work_dir = f"./work_folder/{dataset}/convnext-v2-pico-inchans12/fold_{fold}"
+work_dir = "./work_folder/gencam/convnextv2-tiny/"
 fp16 = dict(loss_scale=256.0, velocity_accum_type="half", accum_type="half")
 launcher = "none"
