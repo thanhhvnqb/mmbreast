@@ -7,7 +7,8 @@ model = dict(
     type="BreastCancerAuxCls",
     backbone=dict(
         type="ConvNeXt",
-        arch="atto",
+        arch="pico",
+        in_channels=3,
         drop_path_rate=0.1,
         layer_scale_init_value=0.0,
         use_grn=True,
@@ -15,7 +16,7 @@ model = dict(
     head=dict(
         type="LinearClsHead",
         num_classes=num_classes,
-        in_channels=320,
+        in_channels=512,
         loss=dict(type="SoftmaxEQLLoss", num_classes=num_classes),
         init_cfg=None,
     ),

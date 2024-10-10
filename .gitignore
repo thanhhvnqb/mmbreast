@@ -4,3 +4,4 @@ work_folder
 wandb
 .*
 pretrained
+bak-*
