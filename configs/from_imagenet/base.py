@@ -14,19 +14,6 @@ batch_size = 16
 
 model = dict(
     type="BreastCancerAuxCls",
-    backbone=dict(
-        type="EfficientNet",
-        arch="b3",
-    ),
-    neck=dict(type="GlobalAveragePooling"),
-    head=dict(
-        type="LinearClsHead",
-        num_classes=num_classes,
-        in_channels=1536,
-        loss=dict(type="SoftmaxEQLLoss", num_classes=num_classes),
-        init_cfg=None,
-    ),
-    init_cfg=dict(type="TruncNormal", layer=["Conv2d", "Linear"], std=0.02, bias=0.0),
     model_config=dataset,
 )
 
