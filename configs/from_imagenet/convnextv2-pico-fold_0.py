@@ -23,5 +23,5 @@ model = dict(
     init_cfg=dict(type="TruncNormal", layer=["Conv2d", "Linear"], std=0.02, bias=0.0),
 )
 resume = False
-load_from = "https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-atto_fcmae-pre_3rdparty_in1k_20230104-23765f83.pth"
-work_dir = f"./work_folder/from_imagenet/convnextv2-atto-fold_{fold}/"
+load_from = "https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-pico_3rdparty-fcmae_in1k_20230104-147b1b59.pth"
+work_dir = f"./work_folder/from_imagenet/convnextv2-pico-fold_{fold}/"

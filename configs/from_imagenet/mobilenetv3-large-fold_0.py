@@ -24,4 +24,4 @@ model = dict(
 )
 resume = False
 load_from = "https://download.openmmlab.com/mmclassification/v0/mobilenet_v3/convert/mobilenet_v3_large-3ea3c186.pth"
-work_dir = f"./work_folder/from_imagenet/mobilenet_v3-small_050-fold_{fold}/"
+work_dir = f"./work_folder/from_imagenet/mobilenet_v3-large-fold_{fold}/"
