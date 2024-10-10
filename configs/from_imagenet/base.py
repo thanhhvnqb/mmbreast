@@ -10,7 +10,7 @@ dataset = [
 fold = 0
 size = (2048, 1024)  # h, w
 epochs = 50
-batch_size = 16
+batch_size = 2
 
 model = dict(
     type="BreastCancerAuxCls",
