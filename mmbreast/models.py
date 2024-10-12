@@ -76,6 +76,11 @@ class SoftmaxEQLLoss(_Loss):
 
 
 @MODELS.register_module(force=True)
+class KLDivLoss(nn.KLDivLoss):
+    pass
+
+
+@MODELS.register_module(force=True)
 class BreastCancerAuxCls(ImageClassifier):
     def __init__(
         self,
@@ -121,7 +126,23 @@ class BreastCancerAuxCls(ImageClassifier):
 
     def loss(self, inputs: torch.Tensor, data_samples: List[MxDataSample]) -> dict:
         feats = self.extract_feat(inputs)
-        loss_cancer = self.head.loss(feats, data_samples)
+        if isinstance(self.head.loss_module, KLDivLoss):
+            # Unpack data samples and pack targets
+            if "gt_score" in data_samples[0]:
+                # Batch augmentation may convert labels to one-hot format scores.
+                target = torch.stack([i.gt_score for i in data_samples])
+            else:
+                target = torch.cat([i.gt_label for i in data_samples])
+            outputs = self.head(feats)
+            loss_cancer = dict()
+            one_hot = torch.zeros(outputs.size(), device="cuda")
+            one_hot.scatter_(1, target.view(-1, 1).long(), 1)
+            loss = self.head.loss_module(
+                outputs.log_softmax(dim=1), one_hot.softmax(dim=1)
+            )
+            loss_cancer["loss"] = loss
+        else:
+            loss_cancer = self.head.loss(feats, data_samples)
         if self.with_auxiliary:
             cancer_target = torch.stack([i.gt_label for i in data_samples]).to(
                 inputs.get_device()
