@@ -87,119 +87,127 @@ class BreastCancerAuxCls(ImageClassifier):
         train_cfg: Optional[dict] = None,
         data_preprocessor: Optional[dict] = None,
         init_cfg: Optional[dict] = None,
+        with_auxiliary: bool = True,
     ):
         super().__init__(
             backbone, neck, head, pretrained, train_cfg, data_preprocessor, init_cfg
         )
         in_channels = head["in_channels"]
         self.model_config = model_config
-        if model_config in ["rsna", "bmcd", "cddcesm", "miniddsm", "vindr"]:
-            self.nn_view = nn.Linear(in_channels, 6)
-        else:
-            self.nn_view = None
-        self.nn_BIRADS = nn.Linear(in_channels, 5)
-        if model_config in ["rsna"]:
-            self.nn_difficulty = nn.Linear(in_channels, 2)
-        else:
-            self.nn_difficulty = None
-        if model_config in ["rsna", "bmcd", "cddcesm", "miniddsm", "vindr"]:
-            self.nn_density = nn.Linear(in_channels, 4)
-        else:
-            self.nn_density = None
+        self.with_auxiliary = with_auxiliary
+        if with_auxiliary:
+            if model_config in ["rsna", "bmcd", "cddcesm", "miniddsm", "vindr"]:
+                self.nn_view = nn.Linear(in_channels, 6)
+            else:
+                self.nn_view = None
+            self.nn_BIRADS = nn.Linear(in_channels, 5)
+            if model_config in ["rsna"]:
+                self.nn_difficulty = nn.Linear(in_channels, 2)
+            else:
+                self.nn_difficulty = None
+            if model_config in ["rsna", "bmcd", "cddcesm", "miniddsm", "vindr"]:
+                self.nn_density = nn.Linear(in_channels, 4)
+            else:
+                self.nn_density = None
 
-        self.nn_sigmoid = nn.Linear(in_channels, 3)
+            self.nn_sigmoid = nn.Linear(in_channels, 3)
 
-        self.ce_loss = torch.nn.CrossEntropyLoss(label_smoothing=0.01)
-        self.sigmoid_loss = torch.nn.BCEWithLogitsLoss()
+            self.ce_loss = torch.nn.CrossEntropyLoss(label_smoothing=0.01)
+            self.sigmoid_loss = torch.nn.BCEWithLogitsLoss()
 
-        self.BIRADS_lossfn = SoftmaxEQLLoss(num_classes=5)
-        self.diff_lossfn = SoftmaxEQLLoss(num_classes=2)
-        self.density_lossfn = SoftmaxEQLLoss(num_classes=4)
+            self.BIRADS_lossfn = SoftmaxEQLLoss(num_classes=5)
+            self.diff_lossfn = SoftmaxEQLLoss(num_classes=2)
+            self.density_lossfn = SoftmaxEQLLoss(num_classes=4)
 
     def loss(self, inputs: torch.Tensor, data_samples: List[MxDataSample]) -> dict:
         feats = self.extract_feat(inputs)
         loss_cancer = self.head.loss(feats, data_samples)
-        cancer_target = torch.stack([i.gt_label for i in data_samples]).to(inputs.get_device())
-        aux_target = torch.stack([i.aux_label.label for i in data_samples]).to(inputs.get_device())
-        feats = feats[-1]
-        aux_weight = 0.1
+        if self.with_auxiliary:
+            cancer_target = torch.stack([i.gt_label for i in data_samples]).to(
+                inputs.get_device()
+            )
+            aux_target = torch.stack([i.aux_label.label for i in data_samples]).to(
+                inputs.get_device()
+            )
+            feats = feats[-1]
+            aux_weight = 0.1
 
-        if self.nn_view:
-            loss_view = self.ce_loss(
-                self.nn_view(feats), aux_target[:, 0].to(torch.long)
-            )
-            loss_cancer.update(
-                {
-                    "loss_view": loss_view * aux_weight,
-                }
-            )
-
-        BIRADS_mask = aux_target[:, 1] > -1
-        if torch.sum(BIRADS_mask) > 0:
-            loss_BIRADS = self.BIRADS_lossfn(
-                self.nn_BIRADS(feats)[BIRADS_mask, :],
-                aux_target[:, 1][BIRADS_mask].to(torch.long),
-            )
-            loss_cancer.update(
-                {
-                    "loss_BIRADS": loss_BIRADS * aux_weight,
-                }
-            )
-        if self.nn_difficulty:
-            difficulty_mask = torch.logical_and(
-                aux_target[:, 3] > -1, cancer_target[:, 0] < 1
-            )
-            if torch.sum(difficulty_mask) > 0:
-                loss_difficulty = self.diff_lossfn(
-                    self.nn_difficulty(feats)[difficulty_mask, :],
-                    aux_target[:, 3][difficulty_mask].to(torch.long),
+            if self.nn_view:
+                loss_view = self.ce_loss(
+                    self.nn_view(feats), aux_target[:, 0].to(torch.long)
                 )
                 loss_cancer.update(
                     {
-                        "loss_difficulty": loss_difficulty * aux_weight,
+                        "loss_view": loss_view * aux_weight,
                     }
                 )
 
-        sig_out = self.nn_sigmoid(feats)
-        if self.model_config in ["rsna"]:
-            invasive_mask = torch.logical_and(
-                aux_target[:, 2] > -1, cancer_target[:, 0] > 0
-            )
-            if torch.sum(invasive_mask) > 0:
-                loss_invasive = self.sigmoid_loss(
-                    sig_out[:, 0][invasive_mask], aux_target[:, 2][invasive_mask]
+            BIRADS_mask = aux_target[:, 1] > -1
+            if torch.sum(BIRADS_mask) > 0:
+                loss_BIRADS = self.BIRADS_lossfn(
+                    self.nn_BIRADS(feats)[BIRADS_mask, :],
+                    aux_target[:, 1][BIRADS_mask].to(torch.long),
                 )
                 loss_cancer.update(
                     {
-                        "loss_invasive": loss_invasive * aux_weight,
+                        "loss_BIRADS": loss_BIRADS * aux_weight,
+                    }
+                )
+            if self.nn_difficulty:
+                difficulty_mask = torch.logical_and(
+                    aux_target[:, 3] > -1, cancer_target[:, 0] < 1
+                )
+                if torch.sum(difficulty_mask) > 0:
+                    loss_difficulty = self.diff_lossfn(
+                        self.nn_difficulty(feats)[difficulty_mask, :],
+                        aux_target[:, 3][difficulty_mask].to(torch.long),
+                    )
+                    loss_cancer.update(
+                        {
+                            "loss_difficulty": loss_difficulty * aux_weight,
+                        }
+                    )
+
+            sig_out = self.nn_sigmoid(feats)
+            if self.model_config in ["rsna"]:
+                invasive_mask = torch.logical_and(
+                    aux_target[:, 2] > -1, cancer_target[:, 0] > 0
+                )
+                if torch.sum(invasive_mask) > 0:
+                    loss_invasive = self.sigmoid_loss(
+                        sig_out[:, 0][invasive_mask], aux_target[:, 2][invasive_mask]
+                    )
+                    loss_cancer.update(
+                        {
+                            "loss_invasive": loss_invasive * aux_weight,
+                        }
+                    )
+
+            # implant_mask = aux_target[:, 4] < 255
+            # if torch.sum(implant_mask) > 0:
+            #     loss_implant = self.sigmoid_loss(sig_out[:, 1][implant_mask],
+            #                                      aux_target[:, 4][implant_mask])
+            #     loss_cancer.update({'loss_implant': loss_implant * aux_weight, })
+
+            age_mask = aux_target[:, 5] > -1
+            if torch.sum(age_mask) > 0:
+                loss_age = self.sigmoid_loss(
+                    sig_out[:, 2][age_mask], aux_target[:, 5][age_mask] / 100
+                )
+                loss_cancer.update(
+                    {
+                        "loss_age": loss_age * aux_weight,
                     }
                 )
 
-        # implant_mask = aux_target[:, 4] < 255
-        # if torch.sum(implant_mask) > 0:
-        #     loss_implant = self.sigmoid_loss(sig_out[:, 1][implant_mask],
-        #                                      aux_target[:, 4][implant_mask])
-        #     loss_cancer.update({'loss_implant': loss_implant * aux_weight, })
-
-        age_mask = aux_target[:, 5] > -1
-        if torch.sum(age_mask) > 0:
-            loss_age = self.sigmoid_loss(
-                sig_out[:, 2][age_mask], aux_target[:, 5][age_mask] / 100
-            )
-            loss_cancer.update(
-                {
-                    "loss_age": loss_age * aux_weight,
-                }
-            )
-
-        if self.nn_density:
-            density_mask = aux_target[:, 6] > -1
-            if torch.sum(density_mask) > 0:
-                loss_density = self.density_lossfn(
-                    self.nn_density(feats)[density_mask],
-                    aux_target[:, 6][density_mask].to(torch.long),
-                )
-                loss_cancer.update({"loss_density": loss_density * aux_weight})
+            if self.nn_density:
+                density_mask = aux_target[:, 6] > -1
+                if torch.sum(density_mask) > 0:
+                    loss_density = self.density_lossfn(
+                        self.nn_density(feats)[density_mask],
+                        aux_target[:, 6][density_mask].to(torch.long),
+                    )
+                    loss_cancer.update({"loss_density": loss_density * aux_weight})
 
         return loss_cancer
 
