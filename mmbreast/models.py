@@ -1,4 +1,5 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
+import math
 
 import torch
 import torch.nn as nn
@@ -7,8 +8,9 @@ from torch.nn.modules.loss import _Loss
 
 from mmpretrain.registry import MODELS
 from mmpretrain.models.classifiers.image import ImageClassifier
+from mmpretrain.models.heads import ClsHead
+from mmpretrain.evaluation.metrics import Accuracy
 from mmengine.dist import all_reduce as allreduce
-
 from .transforms import MxDataSample
 
 
@@ -80,6 +82,154 @@ class KLDivLoss(nn.KLDivLoss):
     pass
 
 
+# From https://github.com/GOKORURI007/pytorch_arcface/blob/main/arcface.py
+@MODELS.register_module()
+class ArcfaceClsHead(ClsHead):
+    """Linear classifier head.
+
+    Args:
+        num_classes (int): Number of categories excluding the background
+            category.
+        in_channels (int): Number of channels in the input feature map.
+        loss (dict): Config of classification loss. Defaults to
+            ``dict(type='CrossEntropyLoss', loss_weight=1.0)``.
+        topk (int | Tuple[int]): Top-k accuracy. Defaults to ``(1, )``.
+        cal_acc (bool): Whether to calculate accuracy during training.
+            If you use batch augmentations like Mixup and CutMix during
+            training, it is pointless to calculate accuracy.
+            Defaults to False.
+        init_cfg (dict, optional): the config to control the initialization.
+            Defaults to ``dict(type='Normal', layer='Linear', std=0.01)``.
+    """
+
+    def __init__(
+        self,
+        num_classes: int,
+        in_channels: int,
+        scale=64,
+        margin=0.5,
+        easy_margin=False,
+        init_cfg: Optional[dict] = dict(type="Normal", layer="Linear", std=0.01),
+        **kwargs,
+    ):
+        super(ArcfaceClsHead, self).__init__(init_cfg=init_cfg, **kwargs)
+
+        self.in_channels = in_channels
+        self.num_classes = num_classes
+
+        if self.num_classes <= 0:
+            raise ValueError(f"num_classes={num_classes} must be a positive integer")
+
+        self.scale = scale
+        self.margin = margin
+        self.weight = nn.Parameter(torch.FloatTensor(num_classes, in_channels))
+        self.easy_margin = easy_margin
+        self.cos_m = math.cos(margin)
+        self.sin_m = math.sin(margin)
+        self.th = math.cos(math.pi - margin)
+        self.mm = math.sin(math.pi - margin) * margin
+
+    def forward(self, feats: Tuple[torch.Tensor]) -> torch.Tensor:
+        """The forward process."""
+        pre_logits = self.pre_logits(feats)
+
+        # --------------------------- cos(theta) & phi(theta) ---------------------------
+        cos_theta = F.linear(F.normalize(pre_logits), F.normalize(self.weight)).clamp(
+            -1 + 1e-7, 1 - 1e-7
+        )
+        sin_theta = torch.sqrt(
+            (1.0 - torch.pow(cos_theta, 2)).clamp(-1 + 1e-7, 1 - 1e-7)
+        )
+        phi = cos_theta * self.cos_m - sin_theta * self.sin_m
+        if self.easy_margin:
+            phi = torch.where(cos_theta > 0, phi, cos_theta)
+        else:
+            phi = torch.where(cos_theta > self.th, phi, cos_theta - self.mm)
+        # --------------------------- convert label to one-hot ---------------------------
+        one_hot = torch.zeros(cos_theta.size(), device=pre_logits.device)
+        target = torch.ones(cos_theta.size(0), device=pre_logits.device)
+        one_hot.scatter_(1, target.view(-1, 1).long(), 1)
+        # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
+        output_1 = (one_hot * phi) + ((1.0 - one_hot) * cos_theta)
+
+        one_hot = torch.zeros(cos_theta.size(), device=pre_logits.device)
+        target = torch.zeros(cos_theta.size(0), device=pre_logits.device)
+        one_hot.scatter_(1, target.view(-1, 1).long(), 1)
+        # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
+        output = (one_hot * phi) + ((1.0 - one_hot) * cos_theta)
+
+        output[:, 1] = output_1[:, 1]
+        output *= self.scale
+        # Có 3 cách: 1: như hiện tại, set target thành 1.
+        # Cách 2: thực hiện 2 lần set target: 1 và 0. Sau đó, output là gộp của 2 lần set target.
+        # Cách 3: thực hiện huấn luyện bằng arcface, sau đó, thực hiện huấn luyện bằng crossentropy.
+        return output
+
+    def loss(
+        self, feats: Tuple[torch.Tensor], data_samples: List[MxDataSample], **kwargs
+    ) -> dict:
+        """Calculate losses from the classification score.
+
+        Args:
+            feats (tuple[Tensor]): The features extracted from the backbone.
+                Multiple stage inputs are acceptable but only the last stage
+                will be used to classify. The shape of every item should be
+                ``(num_samples, num_classes)``.
+            data_samples (List[DataSample]): The annotation data of
+                every samples.
+            **kwargs: Other keyword arguments to forward the loss module.
+
+        Returns:
+            dict[str, Tensor]: a dictionary of loss components
+        """
+        # The part can be traced by torch.fx
+        pre_logits = self.pre_logits(feats)
+
+        # Unpack data samples and pack targets
+        if "gt_score" in data_samples[0]:
+            # Batch augmentation may convert labels to one-hot format scores.
+            target = torch.stack([i.gt_score for i in data_samples])
+        else:
+            target = torch.cat([i.gt_label for i in data_samples])
+
+        # --------------------------- cos(theta) & phi(theta) ---------------------------
+        cos_theta = F.linear(F.normalize(pre_logits), F.normalize(self.weight)).clamp(
+            -1 + 1e-7, 1 - 1e-7
+        )
+        sin_theta = torch.sqrt(
+            (1.0 - torch.pow(cos_theta, 2)).clamp(-1 + 1e-7, 1 - 1e-7)
+        )
+        phi = cos_theta * self.cos_m - sin_theta * self.sin_m
+        if self.easy_margin:
+            phi = torch.where(cos_theta > 0, phi, cos_theta)
+        else:
+            phi = torch.where(cos_theta > self.th, phi, cos_theta - self.mm)
+        # --------------------------- convert label to one-hot ---------------------------
+        one_hot = torch.zeros(cos_theta.size(), device=pre_logits.device)
+        one_hot.scatter_(1, target.view(-1, 1).long(), 1)
+        # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
+        cls_score = (one_hot * phi) + ((1.0 - one_hot) * cos_theta)
+        cls_score *= self.scale
+
+        # compute loss
+        losses = dict()
+        loss = self.loss_module(
+            cls_score, target, avg_factor=cls_score.size(0), **kwargs
+        )
+        losses["loss"] = loss
+
+        # compute accuracy
+        if self.cal_acc:
+            assert target.ndim == 1, (
+                "If you enable batch augmentation "
+                "like mixup during training, `cal_acc` is pointless."
+            )
+            acc = Accuracy.calculate(cls_score, target, topk=self.topk)
+            losses.update({f"accuracy_top-{k}": a for k, a in zip(self.topk, acc)})
+
+        return losses
+
+
 @MODELS.register_module(force=True)
 class BreastCancerAuxCls(ImageClassifier):
     def __init__(
@@ -126,6 +276,7 @@ class BreastCancerAuxCls(ImageClassifier):
 
     def loss(self, inputs: torch.Tensor, data_samples: List[MxDataSample]) -> dict:
         feats = self.extract_feat(inputs)
+        # From https://github.com/cornell-zhang/FracBNN/blob/main/imagenet.py#L167
         if isinstance(self.head.loss_module, KLDivLoss):
             # Unpack data samples and pack targets
             if "gt_score" in data_samples[0]:
