@@ -25,4 +25,4 @@ resume = False
 load_from = (
     "./work_folder/from_imagenet/efficient-b3-fold_0-arcface/best_pfbeta_epoch_50.pth"
 )
-work_dir = f"./work_folder/from_arceface/efficient-b3-fold_{fold}-ce_loss/"
+work_dir = f"./work_folder/from_arceface/efficient-b3-fold_{fold}-ce_loss-from_arcface-frozen/"
