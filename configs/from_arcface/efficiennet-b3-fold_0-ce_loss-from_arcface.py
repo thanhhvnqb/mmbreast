@@ -22,6 +22,6 @@ model = dict(
 resume = False
 # load_from = "https://download.openmmlab.com/mmclassification/v0/efficientnet/efficientnet-b3_3rdparty-ra-noisystudent_in1k_20221103-a4ab5fd6.pth"
 load_from = (
-    "./work_folder/from_imagenet/efficient-b3-fold_0-arcface/best_pfbeta_epoch_1.pth"
+    "./work_folder/from_imagenet/efficient-b3-fold_0-arcface/best_pfbeta_epoch_50.pth"
 )
 work_dir = f"./work_folder/from_arceface/efficient-b3-fold_{fold}-ce_loss-from_arcface/"
