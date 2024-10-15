@@ -160,9 +160,6 @@ class ArcfaceClsHead(ClsHead):
 
         output[:, 1] = output_1[:, 1]
         output *= self.scale
-        # Có 3 cách: 1: như hiện tại, set target thành 1.
-        # Cách 2: thực hiện 2 lần set target: 1 và 0. Sau đó, output là gộp của 2 lần set target.
-        # Cách 3: thực hiện huấn luyện bằng arcface, sau đó, thực hiện huấn luyện bằng crossentropy.
         return output
 
     def loss(
@@ -243,6 +240,8 @@ class BreastCancerAuxCls(ImageClassifier):
         data_preprocessor: Optional[dict] = None,
         init_cfg: Optional[dict] = None,
         with_auxiliary: bool = True,
+        with_arcface: bool = False,
+        arcface_cfg: Optional[dict] = None,
     ):
         super().__init__(
             backbone, neck, head, pretrained, train_cfg, data_preprocessor, init_cfg
@@ -273,6 +272,27 @@ class BreastCancerAuxCls(ImageClassifier):
             self.BIRADS_lossfn = SoftmaxEQLLoss(num_classes=5)
             self.diff_lossfn = SoftmaxEQLLoss(num_classes=2)
             self.density_lossfn = SoftmaxEQLLoss(num_classes=4)
+        self.with_arcface = with_arcface
+        if with_arcface:
+            loss_module_arcface = arcface_cfg.get(
+                "loss_module", dict(type="CrossEntropyLoss", loss_weight=1.0)
+            )
+            if not isinstance(loss_module_arcface, nn.Module):
+                loss_module_arcface = MODELS.build(loss_module_arcface)
+            self.loss_module_arcface = loss_module_arcface
+            margin = arcface_cfg.get("margin", 0.5)
+            self.arcface_weight = arcface_cfg.get("arcface_weight", 1.0)
+            self.scale = arcface_cfg.get("scale", 64)
+            self.margin = margin
+            self.easy_margin = arcface_cfg.get("easy_margin", False)
+            self.ce = nn.CrossEntropyLoss()
+            self.weight = nn.Parameter(
+                torch.FloatTensor(self.head.num_classes, in_channels)
+            )
+            self.cos_m = math.cos(margin)
+            self.sin_m = math.sin(margin)
+            self.th = math.cos(math.pi - margin)
+            self.mm = math.sin(math.pi - margin) * margin
 
     def loss(self, inputs: torch.Tensor, data_samples: List[MxDataSample]) -> dict:
         feats = self.extract_feat(inputs)
@@ -294,8 +314,9 @@ class BreastCancerAuxCls(ImageClassifier):
             loss_cancer["loss"] = loss
         else:
             loss_cancer = self.head.loss(feats, data_samples)
+
         if self.with_auxiliary:
-            cancer_target = torch.stack([i.gt_label for i in data_samples]).to(
+            cancer_target = torch.cat([i.gt_label for i in data_samples]).to(
                 inputs.get_device()
             )
             aux_target = torch.stack([i.aux_label.label for i in data_samples]).to(
@@ -327,7 +348,7 @@ class BreastCancerAuxCls(ImageClassifier):
                 )
             if self.nn_difficulty:
                 difficulty_mask = torch.logical_and(
-                    aux_target[:, 3] > -1, cancer_target[:, 0] < 1
+                    aux_target[:, 3] > -1, cancer_target < 1
                 )
                 if torch.sum(difficulty_mask) > 0:
                     loss_difficulty = self.diff_lossfn(
@@ -343,7 +364,7 @@ class BreastCancerAuxCls(ImageClassifier):
             sig_out = self.nn_sigmoid(feats)
             if self.model_config in ["rsna"]:
                 invasive_mask = torch.logical_and(
-                    aux_target[:, 2] > -1, cancer_target[:, 0] > 0
+                    aux_target[:, 2] > -1, cancer_target > 0
                 )
                 if torch.sum(invasive_mask) > 0:
                     loss_invasive = self.sigmoid_loss(
@@ -380,6 +401,9 @@ class BreastCancerAuxCls(ImageClassifier):
                         aux_target[:, 6][density_mask].to(torch.long),
                     )
                     loss_cancer.update({"loss_density": loss_density * aux_weight})
+        if self.with_arcface:
+            loss_arcface = self.loss_arcface(feats, cancer_target)
+            loss_cancer.update({"loss_arcface": loss_arcface * self.arcface_weight})
 
         return loss_cancer
 
@@ -389,3 +413,43 @@ class BreastCancerAuxCls(ImageClassifier):
         BIRADS = self.nn_BIRADS(feats).softmax(dim=1)
         Density = self.nn_density(feats).softmax(dim=1)
         return (BIRADS, Density)
+
+    def loss_arcface(self, embedding: torch.Tensor, target, **kwargs) -> dict:
+        """Calculate losses from the classification score.
+
+        Args:
+            feats (tuple[Tensor]): The features extracted from the backbone.
+                Multiple stage inputs are acceptable but only the last stage
+                will be used to classify. The shape of every item should be
+                ``(num_samples, num_classes)``.
+            data_samples (List[DataSample]): The annotation data of
+                every samples.
+            **kwargs: Other keyword arguments to forward the loss module.
+
+        Returns:
+            dict[str, Tensor]: a dictionary of loss components
+        """
+        # --------------------------- cos(theta) & phi(theta) ---------------------------
+        cos_theta = F.linear(F.normalize(embedding), F.normalize(self.weight)).clamp(
+            -1 + 1e-7, 1 - 1e-7
+        )
+        sin_theta = torch.sqrt(
+            (1.0 - torch.pow(cos_theta, 2)).clamp(-1 + 1e-7, 1 - 1e-7)
+        )
+        phi = cos_theta * self.cos_m - sin_theta * self.sin_m
+        if self.easy_margin:
+            phi = torch.where(cos_theta > 0, phi, cos_theta)
+        else:
+            phi = torch.where(cos_theta > self.th, phi, cos_theta - self.mm)
+        # --------------------------- convert label to one-hot ---------------------------
+        one_hot = torch.zeros(cos_theta.size(), device=embedding.device)
+        one_hot.scatter_(1, target.view(-1, 1).long(), 1)
+        # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
+        cls_score = (one_hot * phi) + ((1.0 - one_hot) * cos_theta)
+        cls_score *= self.scale
+
+        # compute loss
+        loss = self.loss_module_arcface(
+            cls_score, target, avg_factor=cls_score.size(0), **kwargs
+        )
+        return loss
