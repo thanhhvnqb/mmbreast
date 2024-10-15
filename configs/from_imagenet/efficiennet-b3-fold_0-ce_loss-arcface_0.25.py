@@ -18,7 +18,7 @@ model = dict(
         init_cfg=None,
     ),
     with_arcface=True,
-    arcface_cfg=dict(loss_module=dict(type="CrossEntropyLoss", loss_weight=0.25)),
+    arcface_cfg=dict(loss_module=dict(type="CrossEntropyLoss", loss_weight=0.02)),
     init_cfg=dict(type="TruncNormal", layer=["Conv2d", "Linear"], std=0.02, bias=0.0),
 )
 resume = False
