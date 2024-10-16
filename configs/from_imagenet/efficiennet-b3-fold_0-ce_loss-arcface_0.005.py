@@ -18,9 +18,11 @@ model = dict(
         init_cfg=None,
     ),
     with_arcface=True,
-    arcface_cfg=dict(loss_module=dict(type="CrossEntropyLoss", loss_weight=0.05)),
+    arcface_cfg=dict(loss_module=dict(type="CrossEntropyLoss", loss_weight=0.005)),
     init_cfg=dict(type="TruncNormal", layer=["Conv2d", "Linear"], std=0.02, bias=0.0),
 )
 resume = False
 load_from = "https://download.openmmlab.com/mmclassification/v0/efficientnet/efficientnet-b3_3rdparty-ra-noisystudent_in1k_20221103-a4ab5fd6.pth"
-work_dir = f"./work_folder/from_imagenet/efficient-b3-fold_{fold}-ce_loss-arcface_0.05/"
+work_dir = (
+    f"./work_folder/from_imagenet/efficient-b3-fold_{fold}-ce_loss-arcface_0.005/"
+)
